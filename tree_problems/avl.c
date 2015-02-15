@@ -55,6 +55,20 @@ int max(int a, int b)
 	return (a > b) ? a : b;
 }
 
+/*
+ * Rotate right
+ * let x is newly added node. B(R) is right subtree of B
+ * A can be a subtree. T is tree above A
+ * 
+ *		 T
+ *		/
+ *            A
+ *	     /
+ *	    B
+ *	   / \
+ *	  X   B(R)
+ *
+ */
 avl_node *apply_LL(avl_node *A)
 {
 	avl_node *B;
@@ -72,6 +86,20 @@ avl_node *apply_LL(avl_node *A)
 	return B;
 }
 
+/*
+ * Rotate Left
+ * let x is newly added node. B(L) is left subtree of B
+ * A can be a subtree. T is tree above A
+ * 
+ *		 T
+ *		  \
+ *            	   A
+ *	     	    \
+ *	    	     B
+ *	   	    / \
+ *	          B(L) X
+ *
+ */
 avl_node *apply_RR(avl_node *A)
 {
 	avl_node *B;
@@ -89,6 +117,22 @@ avl_node *apply_RR(avl_node *A)
 	return B;
 }
 
+/*
+ * Rotate Left and then rotate right
+ * let x is newly added node. B(L) is left subtree of B
+ * A can be a subtree. T is tree above A
+ * 
+ *		 T
+ *		/
+ *            A
+ *	     /
+ *	    B
+ *	   / \
+ *	B(L) X 
+ * 
+ * Rotate left around B first then, rotate right around A
+ *
+ */
 avl_node *apply_LR(avl_node *A)
 {
 	printf("In %s\n", __FUNCTION__);
@@ -99,6 +143,22 @@ avl_node *apply_LR(avl_node *A)
 
 }
 
+/*
+ * Rotate Right and then rotate left
+ * let x is newly added node. B(R) is right subtree of B
+ * A can be a subtree. T is tree above A
+ * 
+ *		 T
+ *		  \
+ *            	   A
+ *	     	    \
+ *	    	     B
+ *	   	    / \
+ *	           X   B(R)
+ * 
+ * Rotate right around B first then, rotate left around A
+ *
+ */
 avl_node *apply_RL(avl_node *A)
 {
 	printf("In %s\n", __FUNCTION__);
