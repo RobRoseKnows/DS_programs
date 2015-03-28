@@ -1,5 +1,6 @@
 #include <stdio.h>
-#include <stdlib.h> //for malloc
+#include <stdlib.h> //for malloc(), rand()
+#include <assert.h> //for assert()
 
 /* 
 Definition
@@ -50,7 +51,8 @@ typedef struct splay_node {
 } splay_node;
 
 splay_node *root = NULL; 			// denotes root of splay tree
-#define NUM_OPS 4
+splay_node *root1 = NULL, *root2 = NULL;			//for join operation
+#define NUM_OPS 6
 
 #define DEBUG_ON 0
 
@@ -71,9 +73,9 @@ int max(int a, int b)
  * let x is newly added node. B(R) is right subtree of B
  * A can be a subtree. T is tree above A
  * 
- *		 T
- *		/
- *            A
+ *		    T
+ *		   /
+ *        A
  *	     /
  *	    B
  *	   / \
@@ -100,11 +102,11 @@ splay_node *apply_LL(splay_node *A)
  * 
  *		 T
  *		  \
- *            	   A
- *	     	    \
- *	    	     B
+ *			A
+ *	     	 \
+ *			 B
  *	   	    / \
- *	          B(L) X
+ *	     B(L) X
  *
  */
 splay_node *apply_RR(splay_node *A)
@@ -125,9 +127,9 @@ splay_node *apply_RR(splay_node *A)
  * let x is newly added node. B(L) is left subtree of B
  * A can be a subtree. T is tree above A
  * 
- *		 T
- *		/
- *            A
+ *		    T
+ *		   /
+ *        A
  *	     /
  *	    B
  *	   / \
@@ -153,11 +155,11 @@ splay_node *apply_LR(splay_node *A)
  * 
  *		 T
  *		  \
- *            	   A
- *	     	    \
- *	    	     B
+ *         A
+ *	     	\
+ *	    	 B
  *	   	    / \
- *	           X   B(R)
+ *	       X   B(R)
  * 
  * Rotate right around B first then, rotate left around A
  *
@@ -196,48 +198,61 @@ splay_node *splay_adjust(int key, splay_node *root)
 		if (root->left == NULL) return root;
 	
 		//LL case
-		if (key < root->left->key) {
+		if (key <= root->left->key) {   //NOTE : "<=". Was a bug
 			debug_printf("%s: In LL : root left is %d\n", __FUNCTION__, root->left->key);
 			
 			root->left->left = splay_adjust(key, root->left->left);
-			debug_printf("%s: In LL : root left left is %d\n", __FUNCTION__, root->left->left->key);
 
 			//now rotate right
-			root = apply_LL(root);
-			debug_printf("%s: In LL :After 1st R rotation root=%d\n", __FUNCTION__, root->key);
+			if (root->left->left != NULL) {
+				debug_printf("%s: In LL : root left left is %d\n", __FUNCTION__, root->left->left->key);
+				root = apply_LL(root);
+			}
 			
+			debug_printf("%s: In LL :After 1st R rotation root=%d\n", __FUNCTION__, root->key);
 
 			// if root has left subtree, rotate right again, as this is LL(2 right rotations)
-			if (root->left)
+			if (root->left) {
 				root = apply_LL(root);
+			}
+
+			debug_printf("%s: In RR :After 2nd R rotation root=%d\n", __FUNCTION__, root->key);
 		} else { //LR case
 			root->left->right = splay_adjust(key, root->left->right);
 			
 			//rotate left first and then rotate right
-			root = apply_LR(root);
+			if (root->left->right != NULL)			//Was a bug : this chk is important, otherwise apply_RR will try to access NULL
+				root = apply_LR(root);
 		}
 	} else {	//key lies in right subtree
 		if (root->right == NULL) return root;
 		
 		//RR case
-		if (key > root->right->key) {
+		if (key >= root->right->key) { 	//NOTE : ">=. was a bug
 			debug_printf("%s: In RR : root right is %d\n", __FUNCTION__, root->right->key);
 
 			root->right->right = splay_adjust(key, root->right->right);
-			debug_printf("%s: In RR : root right right is %d\n", __FUNCTION__, root->right->right->key);
 
 			//now rotate left
-			root = apply_RR(root);
+			if (root->right->right != NULL) {
+				debug_printf("%s: In RR : root right right is %d\n", __FUNCTION__, root->right->right->key);
+				root = apply_RR(root);
+			}
+
 			debug_printf("%s: In RR :After 1st L rotation root=%d\n", __FUNCTION__, root->key);
 
 			// if root has right subtree, rotate left again, as this is RR(2 left rotations)
 			if (root->right)
 				root = apply_RR(root);
+			
+			debug_printf("%s: In RR :After 2nd L rotation root=%d\n", __FUNCTION__, root->key);
+
 		} else { //RL case
 			root->right->left = splay_adjust(key, root->right->left);
 		
 			//rotate right first and then rotate left
-			root = apply_RL(root);
+			if (root->right->left != NULL)
+				root = apply_RL(root);
 		}
 	}
 	
@@ -293,7 +308,7 @@ void insert_splay(int key, splay_node **root)
 		node->right = *root;
 		node->left = (*root)->left;
 		(*root)->left = NULL;
-	} else if(key > node->key) {
+	} else if(key > (*root)->key) {
 		node->left = *root;
 		node->right = (*root)->right;
 		(*root)->right = NULL;
@@ -304,8 +319,15 @@ void insert_splay(int key, splay_node **root)
 	return;
 }
 
-void search(int key, splay_node **node)
+/**
+ * Algorithm :
+ * 1. search an element
+ * 2. splay it to root, if found
+ * 3. return new root
+ **/ 
+int search(int key, splay_node **node)
 {
+	int found = 0;
 	//splay_node *found_node;
 	
 	//use node here and not any local
@@ -314,12 +336,14 @@ void search(int key, splay_node **node)
 	debug_printf("%s : ENTER \n", __FUNCTION__);
 	(*node) = splay_adjust(key, *node);
 
-	if ((*node)->key == key)
+	if ((*node)->key == key) {
 		printf("KEY FOUND\n");
-	else
+		found = 1;
+	} else
 		printf("KEY not found\n");
 
 	debug_printf("%s : After search new root is : %d\n", __FUNCTION__, (*node)->key);
+	return found;
 }
 
 //preorder
@@ -341,6 +365,126 @@ void inorder_splay(splay_node *node)
 	}
 }
 
+//return the right most element of BST
+int find_max(splay_node *root, int max)
+{
+	splay_node *temp;
+	temp = root;
+	while (temp->right != NULL)
+		temp = temp->right;
+
+	max = temp->key;
+	return max;
+}
+
+
+splay_node *join_util(splay_node **root1, splay_node **root2)
+{
+	int max_elem;
+
+	//Find max in T1
+	max_elem = find_max(*root1, 0);
+	debug_printf("\nmax elem in T1 is : %d\n", max_elem);
+
+	*root1 = splay_adjust(max_elem, *root1);
+
+	if ((*root1)->right != NULL) {
+		debug_printf("This is unexpected : root's right child = %d\n", (*root1)->right->key);
+		assert(0);
+	}
+	
+	(*root1)->right = *root2;
+
+	return (*root1);
+}
+
+/**
+ * Algorithm : Join trees T1 and T2 provided elements in
+ * 			   T1 are smaller than elements in T2
+ * 1. Find the max element in T1 and splay the element
+ *    which means that this new root(max element of T1)
+ *    has null right child
+ * 2. Now attach T2 as right child of T1
+ **/
+void join_trees()
+{
+	int i;
+	unsigned int val;
+	//create 1st tree
+	
+	for (i = 0; i < 5; i++) {
+		val = (rand() + i) % 10;
+		debug_printf("%d\n", val);
+		insert_splay(val, &root1);
+	}
+#if DEBUG_ON
+	debug_printf("1st tree :\n");
+	preorder_splay(root1);
+	printf("\n");
+#endif
+
+	debug_printf("creating second tree\n");
+	//create 2nd tree
+	for (i = 10; i < 15; i++) {
+		val = rand() % 20;
+		if (val < 10)
+			val += i;
+		debug_printf("%d\n", val);
+		insert_splay(val, &root2);
+	}
+
+#if DEBUG_ON
+	debug_printf("2nd tree :\n");
+	preorder_splay(root2);
+	printf("\n");
+#endif
+
+	root1 = join_util(&root1, &root2);
+
+	//print new tree
+	preorder_splay(root1);
+	printf("\n");
+
+	//make root1 as new root for subsequent operations
+	root = root1;	
+}
+
+/**
+ * Algorithm : Given a tree and a key x.
+ * 			   Need to split the tree into tree T1 and T2
+ * 			   such that elements in T1 are <= x and
+ * 			   T2 has elements > x
+ *
+ * 1. search key x in tree
+ * 2. if key is not found, return without splitting tree
+ * 3. if key is found, splay the key and split the tree
+ *    with T1 containing all nodes of left subtree and root.
+ *    And T2 conataining all nodes of right subtree
+ **/
+void split_tree(splay_node **root, int key)
+{
+	int found;
+	splay_node *root1 = NULL, *root2 = NULL;
+
+	found = search(key, root);
+
+	if (!found) {
+		printf("Key not found. Cannot split the tree \n");
+		exit(0);
+	}
+	
+	root1 = *root;
+	root2 = (*root)->right;
+
+	printf("1st tree :");
+	preorder_splay(root1);
+	printf("\n");
+
+	printf("2nd tree :");
+	preorder_splay(root2);
+	printf("\n");
+}
+
 void perform_action(int op)
 {
 	int x;
@@ -360,8 +504,18 @@ void perform_action(int op)
 			
 			search(x, &root);
 			break;
-		case 4: 										//print avl tree
-			inorder_splay(root);
+		case 4:		//JOIN op
+			root1 = NULL;
+			root2 = NULL;
+			join_trees();
+			break;
+		case 5:		//Split op
+			printf("Enter element :");
+            scanf("%d", &x);
+			split_tree(&root, x);
+			break;
+		case 6: 										//print splay tree
+			preorder_splay(root);
 			printf("\n");
 			break;
 
@@ -378,10 +532,13 @@ int main()
     do {
         printf("Operations : \n");
         printf("1. Insert an element into SPLAY tree\n");
-        printf("2. Delete an element from SPLAY tree\n");
+        printf("2. Delete an element from SPLAY tree\n");		//TODO
         printf("3. Search an element from SPLAY tree\n");
+        printf("4. Join two trees\n");
+        printf("5. Split trees based on given key\n");
 	
-        printf("4. Print SPLAY tree (Inorder)\n");
+	
+        printf("6. Print SPLAY tree (Inorder)\n");
 
         printf("Enter option :");
         scanf("%d", &op);
@@ -392,3 +549,31 @@ int main()
     return 0;
 }
 
+
+
+/*
+ * BUG :
+9 7 7 3 8 15 12 17 22 
+Operations : 
+1. Insert an element into SPLAY tree
+2. Delete an element from SPLAY tree
+3. Search an element from SPLAY tree
+4. Join two trees
+5. Split trees based on given key
+6. Print SPLAY tree (Inorder)
+Enter option :5
+Enter element :15
+search : ENTER 
+splay_adjust : ENTER 
+splay_adjust: In RR : root right is 15
+splay_adjust : ENTER 
+splay_adjust: key = 15, root is 17
+splay_adjust: In RR : root right right is 17
+apply_RR : ENTER 
+splay_adjust: In RR :After 1st L rotation root=15
+apply_RR : ENTER 
+splay_adjust: In RR :After 2nd L rotation root=17
+KEY not found
+search : After search new root is : 17
+Key not found. Cannot split the tree 
+*/
