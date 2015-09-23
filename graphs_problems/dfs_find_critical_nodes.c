@@ -10,7 +10,7 @@
  * Now find all critical nodes
  *
  * Algo:
- * For this we have to maintain one more 2-d array wgich will maintain
+ * For this we have to maintain one more 2-d array which will maintain
  * critical nodes pairs
  *
  * example :

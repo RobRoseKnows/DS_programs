@@ -110,7 +110,7 @@ void add_edge(int src, int dest, graph **g)
 
 /**
  * start : starting point from where traversal has to started  <IN>
- * g : graphwhich is to be traversed                           <IN>
+ * g     : graph which is to be traversed                           <IN>
  **/
 void bfs_traversal(int start, graph *g)
 {
@@ -133,8 +133,8 @@ void bfs_traversal(int start, graph *g)
 
       printf("%d ", vertex);
       
-      //add to queue, all vertices adjacent to v
-      //before enqueuing if adjacent is marked visited,
+      //add to queue all vertices adjacent to v
+      //before enqueuing if adjacent is not marked visited,
       //mark it visited
       for (i = 0; i < g->v; i++) {
          j = g->adj[vertex][i];
